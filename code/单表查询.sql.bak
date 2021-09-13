@@ -1,0 +1,253 @@
+SHOW DATABASES;   #查看数据库中的数据库
+
+#查看表结构
+DESC dept;
+DESC emp;
+DESC salgrade;
+
+#查询字段
+SELECT ename,empno,sal FROM emp;
+SELECT * FROM emp;				 #实际开发不要使用*，效率低
+SELECT ename AS "名字",sal AS "薪水" FROM emp;	 #起别名
+SELECT ename '名字',sal '薪水' FROM emp;     	 #数据库中的字符串都用''号，尽量不要使用""号。
+SELECT ename '名字',sal*12 '年薪' FROM emp;      #查询字段允许数学表达式
+#补充，select语句后可以跟2种情况，一种的字段名，一种是字面值
+#如下sal 是emp中的字段名， 2199 是一个字面值
+SELECT sal AS '薪水', 2199 AS num FROM emp;
+#=============================================================
+
+#distinct  去除重复字段
+#注意原数据不会被修改，只是查询结果去重
+#1、查看不同的工作岗位
+SELECT DISTINCT job FROM emp;
+
+#distinct必须在所有字段的前面，distinct后接多个字段表示多个字段进行联合去重，而不仅仅是第一个字段去重
+#2、查看不同的部门的不同工作岗位
+SELECT DISTINCT job,deptno FROM emp;
+SELECT DISTINCT deptno,job FROM emp;
+
+#3、查看有多少个不同的工作岗位
+SELECT COUNT(DISTINCT job) Job_count FROM emp;
+
+#=============================================================
+#条件查询
+SELECT ename,empno,sal 
+FROM emp
+WHERE sal = 800;
+
+SELECT ename,empno,sal 
+FROM emp
+WHERE sal != 800;
+
+SELECT ename,empno,sal 
+FROM emp
+WHERE sal >= 800 AND sal <= 3000;
+#sal BETWEEN 800 AND 3000 相当于 sal >= 800 AND sal <= 3000;, between and 必须是左小右大
+SELECT ename,empno,sal
+FROM emp
+WHERE sal BETWEEN 800 AND 3000;
+
+#is null与is not null  不能使用= null，null是一种空状态，不是空值
+SELECT ename,empno,sal,comm 
+FROM emp
+WHERE comm IS NULL;
+SELECT ename,empno,sal,comm 
+FROM emp
+WHERE comm IS NOT NULL;
+
+#and和or同时出现，and的优先比较高，因此在考虑实际问题时有需要时加()进行区分
+#查询部门编号为20或30，工资大于800的员工信息
+SELECT ename,empno,sal,deptno
+FROM emp
+WHERE deptno = 20 OR deptno = 30 AND sal > 800;   #错误写法
+
+SELECT ename,empno,sal,deptno
+FROM emp
+WHERE sal > 800 AND (deptno = 20 OR deptno = 30)   #正确写法
+
+#in(值1，值2，值3...)、not in(值1，值2，值3...)  in后面加的是代表具体的值 值1 and 值2 and 值3 ；不是比较区间 between 值1 and 值2
+SELECT ename,empno,sal 
+FROM emp
+WHERE sal = 800 OR sal = 3000 OR sal = 1100;
+
+SELECT ename,empno,sal 
+FROM emp
+WHERE sal IN(800,1100,3000);
+
+#模糊查询  
+# %任意字符匹配多个，_任意字符只匹配一个，要匹配%，_ 等特俗字符可以使用\%,\_进行匹配,不区分大小写
+SELECT ename,empno,sal
+FROM emp
+WHERE ename LIKE 'a%';
+
+SELECT ename,empno,sal 
+FROM emp
+WHERE ename LIKE '____k';
+#======================================================================================
+
+
+
+#排序（order by）
+#asc升序（不写默认采用升序），desc降序
+SELECT ename,empno,sal
+FROM emp 
+ORDER BY sal;
+
+SELECT ename,empno,sal
+FROM emp
+ORDER BY sal DESC;
+
+#多字段排序，按第一个字段为主关键字，第二个字段为第二关键字，以此类推
+#查询员工信息，先按薪水降序排，薪水相同按名字升序排
+SELECT ename,empno,sal
+FROM emp
+ORDER BY sal DESC,ename;
+
+/*
+select ... from .... where ... order by ....
+第一步：from
+第二步：where
+第三步：select
+第四步：order by
+*/
+SELECT ename,empno,sal
+FROM emp
+WHERE sal BETWEEN 1000 AND 3000
+ORDER BY sal DESC;
+#=====================================================
+
+
+#函数
+/*
+数据处理函数又称为单行处理行数
+单行处理函数特点： 一个输入对应一个输出
+多行处理函数与单行处理函数不同，多行处理函数特点：多个输入，一个输出
+*/
+#在数据库中，只要有null参与的数学运算，最终都会变为null
+#ifnull函数是空处理函数，专门处理空值，可以将null转换为一个具体值
+#计算每个员工年收入（月薪+奖金）*12 是多少
+SELECT ename,empno,(sal+comm)*12 AS "年收入"  FROM emp;   #出现null
+SELECT ename,empno,job,(sal+IFNULL(comm,0))*12 AS '年收入' FROM emp;  
+
+#case ... when ... then ... when ... then ... else ... end
+#当员工工作岗位为 'SALESMAN' 时工资上调50%，当工作岗位为'MANAGER' 工资上调20%，其余的不变
+SELECT ename,empno,job,sal AS 'oldsal',
+	(CASE job WHEN 'SALESMAN' THEN sal*1.5 WHEN 'MANAGER' THEN sal*1.2 ELSE sal END) AS 'newsal'
+	FROM emp;
+
+#1、分组函数（多行处理行数） 分组行数使用是必要进行分组才能使用，如果没有对数据进行分组，整张表默认为一组
+#分组函数会自动忽略null值，因此不需要提前对null进行提前处理，分组函数可以组合使用
+SELECT MAX(comm) FROM emp;
+SELECT MIN(comm) FROM emp;
+SELECT AVG(comm) FROM emp;
+SELECT COUNT(comm) FROM emp;
+SELECT SUM(comm),AVG(comm),MAX(comm) FROM emp;
+#2、count(*) 与 count(字段名) 的区别
+#count(*)  统计表中的总行数，只要有一条记录(记录上允许某个字段出现null)则count++，不可能出现一条记录所有字段的值都为null
+#count(字段名)  统计该字段下所有不为null的元素总数
+SELECT COUNT(*) FROM emp;
+SELECT COUNT(comm) FROM emp;
+#3、分组函数不能直接使用在where子句上  会报错：Invalid use of group function
+#因为使用分组函数
+SELECT ename,empno,sal FROM emp WHERE sal > AVG(sal);
+#==============================================================
+
+
+#分组查询
+/*
+select ... from ... where ... group by ... order by ...
+执行顺序
+第一步：from
+第二步：where
+第三步：group by
+第四步：select
+第五步：order by
+*/
+/*
+1、分组函数不能直接使用在where子句上 ？ 但分组函数可以在select上执行
+SELECT ename,empno,sal FROM emp WHERE sal > AVG(sal);  #报错
+SELECT MIN(comm) FROM emp;   #没有报错
+参考分组查询的执行顺序，where的第二步执行，group by分组是第三步执行，select是第四步执行
+因此在where子句上使用分组函数时，数据还没有进行分组，因此报错了
+当执行select子句是，就算没有group by子句，默认是将整张表分为一组，所以select子句上使用分组函数不会报错。
+*/ 
+#1.1、找出每个工作岗位的工资和。 
+#思路 先按工作岗位进行分组，在求工资之和
+SELECT job,SUM(sal) FROM emp GROUP BY job;
+#【重要结论】 sql语句中，如果有group by子句，select子句只能跟分组字段和分组函数，其余的字段名没有意义（后果可能会造成笛卡尔积）
+#1.2求出每个部门的最高工资
+SELECT deptno,MAX(sal) FROM emp GROUP BY deptno;
+
+#2、group by 字段1,字段2  可以看做两个字段联合分组
+#找出每个部门，不同岗位的最高薪资
+SELECT deptno,job,MAX(sal) FROM emp GROUP BY deptno,job;
+
+#3、使用having子句可以对group by分完组后的数据进行筛选，having不能单独使用，必须有group by子句才能使用
+#3.1、查找那些部门的最高工资超过3000
+#使用having子句完成   =>先分组在筛选
+SELECT deptno,MAX(sal)
+FROM emp
+GROUP BY deptno
+HAVING	MAX(sal) > 3000;
+#使用where子句完成	=>先筛选后分组
+SELECT deptno,MAX(sal)
+FROM emp
+WHERE sal > 3000
+GROUP BY deptno;
+#主要 【重点】  优化策略 先筛选后分组比先分组在筛选，因为这样可以减少一些数据的处理，减少时间。
+#因此能使用where子句进行完成查询就尽量不要使用having子句，但有些情况where子句完成不了，就一定要使用having子句
+#3.2、查询那些部门的平均薪资超过3000,这种情况只能使用having子句完成
+SELECT deptno,AVG(sal)
+FROM emp
+GROUP BY deptno
+HAVING	AVG(sal) > 2500;
+#=======================================
+
+#limit 分页查询
+#limit在order by之后执行，优先级最低
+#完整用法 limit startIndex，length  startIndex是其实下标，length是长度
+#缺省用法 limit length   取length条数据
+#取薪资排行前五的员工
+SELECT ename,sal 
+FROM emp
+ORDER BY sal DESC
+LIMIT 5;
+#取薪资排行【3-5】的员工
+SELECT ename,sal 
+FROM emp
+ORDER BY sal DESC
+LIMIT 2,3;
+#通用分页操作  limit (pageNo - 1) * pageSize ,pageSize
+#【案例】 每页显示5条记录 (伪代码)
+/*
+SELECT ename,sal 
+FROM emp
+ORDER BY sal DESC
+LIMIT (pageNo - 1) * pageSize ,pageSize;
+*/
+#========================================================
+
+
+#单表查询总结
+/*
+select ... from ... where ... group by ... having ... order by ... limit
+执行顺序
+第一步：from
+第二步：where
+第三步：group by
+第四步：having
+第五步：select
+第六步：order by
+第七步：limit
+先从某张表中查询数据，先经过where条件进行筛选出有价值的数据
+对这些有价值的数据进行group by分组，分组后可以还用having继续筛选
+再用select查询出来，最后使用order by排序输出
+*/
+
+#1、找出每个岗位的平均薪资，要求显示平均薪资大于1500，除了'MANAGER'工作岗位之后,按平均薪资降序排序
+SELECT job,AVG(sal) AS avgsal
+FROM emp
+WHERE job != 'MANAGER'
+GROUP BY job
+HAVING AVG(sal) > 1500
+ORDER BY avgsal DESC;
